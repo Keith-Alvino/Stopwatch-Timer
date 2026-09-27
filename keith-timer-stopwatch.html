@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KEITH TIMER-STOPWATCH</title>
+<style>
+  :root {
+    --ink: #eafcff;
+    --ink-dim: #6fa3ad;
+    --bg: #050810;
+    --bg-panel: #0a0f1e;
+    --brass: #00f0ff;
+    --brass-bright: #ff2bd6;
+    --line: #133042;
+    --danger: #ff2b6d;
+    --focus: #00f0ff;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --ink: #eafcff;
+      --ink-dim: #6fa3ad;
+      --bg: #050810;
+      --bg-panel: #0a0f1e;
+      --brass: #00f0ff;
+      --brass-bright: #ff2bd6;
+      --line: #133042;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #eafcff; --ink-dim: #6fa3ad; --bg: #050810; --bg-panel: #0a0f1e;
+    --brass: #00f0ff; --brass-bright: #ff2bd6; --line: #133042;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    background:
+      radial-gradient(circle at 15% 10%, rgba(0,240,255,0.12), transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(255,43,214,0.12), transparent 45%),
+      var(--bg);
+    color: var(--ink);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100%;
+  }
+
+  .frame {
+    width: 100%;
+    max-width: 520px;
+    padding: 2.5rem 1.5rem 3rem;
+  }
+
+  header.title {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  header.title .mark {
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    color: var(--brass);
+    font-family: inherit;
+    font-style: normal;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px var(--brass), 0 0 18px var(--brass);
+  }
+  header.title h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    margin: 0.3rem 0 0;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--brass-bright);
+    text-shadow: 0 0 10px var(--brass-bright), 0 0 24px var(--brass-bright), 0 0 44px rgba(255,43,214,0.5);
+  }
+
+  nav.modes {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px;
+    margin-bottom: 1.75rem;
+  }
+  nav.modes button {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--ink-dim);
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 0.55rem 0;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+  nav.modes button.active {
+    background: var(--brass);
+    color: var(--bg);
+    box-shadow: 0 0 14px var(--brass), 0 0 28px rgba(0,240,255,0.5);
+  }
+  nav.modes button:focus-visible,
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 2.25rem 1.5rem;
+    box-shadow: 0 0 30px rgba(0,240,255,0.08), inset 0 0 40px rgba(255,43,214,0.04);
+  }
+
+  .dial {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 320px;
+    margin: 0 auto;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    box-shadow: 0 0 24px rgba(0,240,255,0.15), inset 0 0 20px rgba(0,240,255,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .dial svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .dial .ring-track { fill: none; stroke: var(--line); stroke-width: 3; }
+  .dial .ring-progress {
+    fill: none;
+    stroke: var(--brass);
+    stroke-width: 3;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+    transition: stroke-dashoffset 0.2s linear;
+    filter: drop-shadow(0 0 6px var(--brass)) drop-shadow(0 0 14px var(--brass));
+  }
+  .readout {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .readout .big {
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: clamp(2.4rem, 9vw, 3.1rem);
+    letter-spacing: 0.02em;
+    line-height: 1;
+    color: var(--ink);
+    text-shadow: 0 0 10px var(--brass), 0 0 22px rgba(0,240,255,0.6);
+  }
+  .readout .centis {
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 1.1rem;
+    color: var(--brass-bright);
+    text-shadow: 0 0 8px var(--brass-bright);
+  }
+  .readout .caption {
+    margin-top: 0.4rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    color: var(--ink-dim);
+    font-style: normal;
+    text-transform: uppercase;
+  }
+
+  .timer-set {
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+    margin: 1.5rem 0 0.25rem;
+  }
+  .timer-set .field {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .timer-set label {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--ink-dim);
+    margin-bottom: 0.3rem;
+    font-style: italic;
+  }
+  .timer-set input {
+    width: 4.2rem;
+    text-align: center;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--ink);
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 1.3rem;
+    padding: 0.4rem 0.2rem;
+  }
+  .timer-set input::-webkit-outer-spin-button,
+  .timer-set input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 0.8rem;
+    margin-top: 2rem;
+  }
+  .controls button {
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 0.7rem 1.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+  }
+  .controls button:active { transform: scale(0.96); }
+  .controls button.primary {
+    background: var(--brass);
+    border-color: var(--brass);
+    color: var(--bg);
+    box-shadow: 0 0 14px var(--brass), 0 0 30px rgba(0,240,255,0.5);
+  }
+  .controls button.danger {
+    color: var(--danger);
+    border-color: var(--danger);
+    text-shadow: 0 0 8px var(--danger);
+  }
+  .controls button:not(.primary):not(.danger) {
+    text-shadow: 0 0 6px rgba(234,252,255,0.4);
+  }
+  .controls button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .laps {
+    margin-top: 1.75rem;
+    border-top: 1px solid var(--line);
+    padding-top: 1rem;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .laps ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .laps li {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 0.9rem;
+    padding: 0.4rem 0.1rem;
+    border-bottom: 1px dashed var(--line);
+    color: var(--ink-dim);
+  }
+  .laps li:last-child { border-bottom: none; }
+  .laps li .n { color: var(--brass); text-shadow: 0 0 6px var(--brass); }
+  .laps li:first-child .t { color: var(--ink); }
+
+  .hidden { display: none !important; }
+
+  footer.note {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.72rem;
+    color: var(--ink-dim);
+    font-style: italic;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="title">
+    <h1>Keith Timer-Stopwatch</h1>
+  </header>
+
+  <nav class="modes" role="tablist">
+    <button id="tab-stopwatch" class="active" role="tab" aria-selected="true">Stopwatch</button>
+    <button id="tab-timer" role="tab" aria-selected="false">Timer</button>
+  </nav>
+
+  <section class="panel">
+    <!-- STOPWATCH -->
+    <div id="view-stopwatch">
+      <div class="dial">
+        <svg viewBox="0 0 200 200">
+          <circle class="ring-track" cx="100" cy="100" r="92"></circle>
+          <circle id="sw-ring" class="ring-progress" cx="100" cy="100" r="92"></circle>
+        </svg>
+        <div class="readout">
+          <div class="big"><span id="sw-time">00:00</span><span class="centis" id="sw-centis">.00</span></div>
+          <div class="caption">Free Run</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="sw-lap" disabled>Mark</button>
+        <button id="sw-startstop" class="primary">Start</button>
+        <button id="sw-reset" class="danger">Reset</button>
+      </div>
+
+      <div class="laps hidden" id="sw-laps">
+        <ol id="sw-lap-list"></ol>
+      </div>
+    </div>
+
+    <!-- TIMER -->
+    <div id="view-timer" class="hidden">
+      <div class="dial">
+        <svg viewBox="0 0 200 200">
+          <circle class="ring-track" cx="100" cy="100" r="92"></circle>
+          <circle id="tm-ring" class="ring-progress" cx="100" cy="100" r="92"></circle>
+        </svg>
+        <div class="readout">
+          <div class="big" id="tm-time">00:00:00</div>
+          <div class="caption" id="tm-caption">Set Countdown Duration</div>
+        </div>
+      </div>
+
+      <div class="timer-set" id="tm-inputs">
+        <div class="field">
+          <label for="tm-h">Clock</label>
+          <input id="tm-h" type="number" min="0" max="23" value="0" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="tm-m">Minutes</label>
+          <input id="tm-m" type="number" min="0" max="59" value="5" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="tm-s">Seconds</label>
+          <input id="tm-s" type="number" min="0" max="59" value="0" inputmode="numeric">
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="tm-startstop" class="primary">Start</button>
+        <button id="tm-reset" class="danger">Reset</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="note">MADE BY KEITH ALVINO HUANG</footer>
+</div>
+
+<script>
+(function () {
+  const RADIUS = 92;
+  const CIRC = 2 * Math.PI * RADIUS;
+
+  function setRing(el, fraction) {
+    el.style.strokeDasharray = CIRC.toFixed(2);
+    el.style.strokeDashoffset = (CIRC * (1 - Math.max(0, Math.min(1, fraction)))).toFixed(2);
+  }
+
+  function pad(n, len) { return String(n).padStart(len || 2, '0'); }
+
+  // ---------- Tabs ----------
+  const tabSW = document.getElementById('tab-stopwatch');
+  const tabTM = document.getElementById('tab-timer');
+  const viewSW = document.getElementById('view-stopwatch');
+  const viewTM = document.getElementById('view-timer');
+
+  function showTab(which) {
+    const swActive = which === 'sw';
+    tabSW.classList.toggle('active', swActive);
+    tabTM.classList.toggle('active', !swActive);
+    tabSW.setAttribute('aria-selected', swActive);
+    tabTM.setAttribute('aria-selected', !swActive);
+    viewSW.classList.toggle('hidden', !swActive);
+    viewTM.classList.toggle('hidden', swActive);
+  }
+  tabSW.addEventListener('click', () => showTab('sw'));
+  tabTM.addEventListener('click', () => showTab('tm'));
+
+  // ---------- Stopwatch ----------
+  let swElapsed = 0;       // ms accumulated
+  let swStartedAt = null;  // timestamp when running started
+  let swRunning = false;
+  let swRAF = null;
+  let swLapCount = 0;
+  let swLastLapMs = 0;
+
+  const swTimeEl = document.getElementById('sw-time');
+  const swCentisEl = document.getElementById('sw-centis');
+  const swRing = document.getElementById('sw-ring');
+  const swStartStop = document.getElementById('sw-startstop');
+  const swResetBtn = document.getElementById('sw-reset');
+  const swLapBtn = document.getElementById('sw-lap');
+  const swLapsWrap = document.getElementById('sw-laps');
+  const swLapList = document.getElementById('sw-lap-list');
+
+  function swCurrentMs() {
+    return swElapsed + (swRunning ? (performance.now() - swStartedAt) : 0);
+  }
+
+  function swRender() {
+    const ms = swCurrentMs();
+    const totalCentis = Math.floor(ms / 10);
+    const centis = totalCentis % 100;
+    const totalSec = Math.floor(ms / 1000);
+    const mm = Math.floor(totalSec / 60);
+    const ss = totalSec % 60;
+    swTimeEl.textContent = pad(mm) + ':' + pad(ss);
+    swCentisEl.textContent = '.' + pad(centis);
+    setRing(swRing, (ms % 60000) / 60000);
+  }
+
+  function swTick() {
+    swRender();
+    if (swRunning) swRAF = requestAnimationFrame(swTick);
+  }
+
+  swStartStop.addEventListener('click', () => {
+    if (!swRunning) {
+      swRunning = true;
+      swStartedAt = performance.now();
+      swStartStop.textContent = 'Pause';
+      swStartStop.classList.remove('primary');
+      swLapBtn.disabled = false;
+      swTick();
+    } else {
+      swRunning = false;
+      swElapsed = swCurrentMs();
+      cancelAnimationFrame(swRAF);
+      swStartStop.textContent = 'Resume';
+      swStartStop.classList.add('primary');
+      swRender();
+    }
+  });
+
+  swResetBtn.addEventListener('click', () => {
+    swRunning = false;
+    cancelAnimationFrame(swRAF);
+    swElapsed = 0;
+    swStartedAt = null;
+    swLapCount = 0;
+    swLastLapMs = 0;
+    swStartStop.textContent = 'Start';
+    swStartStop.classList.add('primary');
+    swLapBtn.disabled = true;
+    swLapList.innerHTML = '';
+    swLapsWrap.classList.add('hidden');
+    swRender();
+  });
+
+  swLapBtn.addEventListener('click', () => {
+    const ms = swCurrentMs();
+    const split = ms - swLastLapMs;
+    swLastLapMs = ms;
+    swLapCount += 1;
+    const li = document.createElement('li');
+    const totalSec = Math.floor(ms / 1000);
+    const totalSplitSec = Math.floor(split / 1000);
+    li.innerHTML = '<span class="n">Lap ' + swLapCount + '</span>' +
+      '<span class="t">' + pad(Math.floor(totalSplitSec / 60)) + ':' + pad(totalSplitSec % 60) +
+      '.' + pad(Math.floor((split % 1000) / 10)) + '</span>';
+    swLapList.insertBefore(li, swLapList.firstChild);
+    swLapsWrap.classList.remove('hidden');
+  });
+
+  swRender();
+
+  // ---------- Timer ----------
+  let tmTotalMs = 0;
+  let tmRemainingMs = 0;
+  let tmRunning = false;
+  let tmDeadline = null;
+  let tmRAF = null;
+  let tmFinished = false;
+
+  const tmH = document.getElementById('tm-h');
+  const tmM = document.getElementById('tm-m');
+  const tmS = document.getElementById('tm-s');
+  const tmInputsWrap = document.getElementById('tm-inputs');
+  const tmTimeEl = document.getElementById('tm-time');
+  const tmCaption = document.getElementById('tm-caption');
+  const tmRing = document.getElementById('tm-ring');
+  const tmStartStop = document.getElementById('tm-startstop');
+  const tmResetBtn = document.getElementById('tm-reset');
+
+  function tmReadInputs() {
+    const h = Math.max(0, Math.min(23, parseInt(tmH.value, 10) || 0));
+    const m = Math.max(0, Math.min(59, parseInt(tmM.value, 10) || 0));
+    const s = Math.max(0, Math.min(59, parseInt(tmS.value, 10) || 0));
+    return (h * 3600 + m * 60 + s) * 1000;
+  }
+
+  function tmFormat(ms) {
+    const totalSec = Math.max(0, Math.ceil(ms / 1000));
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return pad(h) + ':' + pad(m) + ':' + pad(s);
+  }
+
+  function tmRender() {
+    const ms = tmRunning ? Math.max(0, tmDeadline - performance.now()) : tmRemainingMs;
+    tmTimeEl.textContent = tmFormat(ms);
+    setRing(tmRing, tmTotalMs > 0 ? ms / tmTotalMs : 0);
+  }
+
+  function tmTick() {
+    const ms = tmDeadline - performance.now();
+    if (ms <= 0) {
+      tmRemainingMs = 0;
+      tmRunning = false;
+      tmFinished = true;
+      tmTimeEl.textContent = tmFormat(0);
+      setRing(tmRing, 0);
+      tmCaption.textContent = 'finished';
+      tmStartStop.textContent = 'Start';
+      tmStartStop.classList.add('primary');
+      cancelAnimationFrame(tmRAF);
+      return;
+    }
+    tmRemainingMs = ms;
+    tmRender();
+    tmRAF = requestAnimationFrame(tmTick);
+  }
+
+  tmStartStop.addEventListener('click', () => {
+    if (!tmRunning) {
+      if (tmFinished || tmTotalMs === 0) {
+        tmTotalMs = tmReadInputs();
+        tmRemainingMs = tmTotalMs;
+        tmFinished = false;
+      }
+      if (tmRemainingMs <= 0) return;
+      tmRunning = true;
+      tmDeadline = performance.now() + tmRemainingMs;
+      tmInputsWrap.style.visibility = 'hidden';
+      tmCaption.textContent = 'counting down';
+      tmStartStop.textContent = 'Pause';
+      tmStartStop.classList.remove('primary');
+      tmTick();
+    } else {
+      tmRunning = false;
+      tmRemainingMs = Math.max(0, tmDeadline - performance.now());
+      cancelAnimationFrame(tmRAF);
+      tmCaption.textContent = 'paused';
+      tmStartStop.textContent = 'Resume';
+      tmStartStop.classList.add('primary');
+      tmRender();
+    }
+  });
+
+  tmResetBtn.addEventListener('click', () => {
+    tmRunning = false;
+    tmFinished = false;
+    cancelAnimationFrame(tmRAF);
+    tmTotalMs = 0;
+    tmRemainingMs = 0;
+    tmInputsWrap.style.visibility = 'visible';
+    tmCaption.textContent = 'Set Countdown Duration';
+    tmStartStop.textContent = 'Start';
+    tmStartStop.classList.add('primary');
+    tmTimeEl.textContent = tmFormat(tmReadInputs());
+    setRing(tmRing, 0);
+  });
+
+  [tmH, tmM, tmS].forEach((inp) => {
+    inp.addEventListener('input', () => {
+      if (!tmRunning) tmTimeEl.textContent = tmFormat(tmReadInputs());
+    });
+  });
+
+  tmTimeEl.textContent = tmFormat(tmReadInputs());
+  setRing(tmRing, 0);
+})();
+</script>
+</body>
+</html>
